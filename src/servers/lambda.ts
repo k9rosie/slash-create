@@ -10,17 +10,21 @@ import { APIGatewayProxyCallbackV2, APIGatewayProxyEventV2, Context } from 'aws-
  */
 export class AWSLambdaServer extends Server {
   private _handler?: ServerRequestHandler;
+  private _waitForEmptyEventLoop: boolean;
 
   /**
    * @param moduleExports The exports for your module, must be `module.exports`
    * @param target The name of the exported lambda handler (only HTTP APIs with payload version 2.0 are supported)
+   * @param waitForEmptyEventLoop Controls the context flag `callbackWaitsForEmptyEventLoop`
    */
-  constructor(moduleExports: any, target = 'interactions') {
+  constructor(moduleExports: any, target = 'interactions', waitForEmptyEventLoop = true) {
     super({ alreadyListening: true });
+    this._waitForEmptyEventLoop = waitForEmptyEventLoop;
     moduleExports[target] = this._onRequest.bind(this);
   }
 
   private _onRequest(event: APIGatewayProxyEventV2, _context: Context, callback: APIGatewayProxyCallbackV2) {
+    _context.callbackWaitsForEmptyEventLoop = this._waitForEmptyEventLoop;
     if (event.version !== '2.0') {
       return callback('Only payload format version 2.0 is supported.');
     }
